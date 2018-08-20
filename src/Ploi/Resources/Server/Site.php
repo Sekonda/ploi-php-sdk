@@ -219,7 +219,7 @@ class Site extends Resource
 
         $response = $this->getPloi()->makeAPICall($this->getEndpoint());
 
-        if(!empty($response->getJson()->deploy_script)) {
+        if (!empty($response->getJson()->deploy_script)) {
             return $response->getJson()->deploy_script;
         }
 
