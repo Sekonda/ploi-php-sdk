@@ -6,6 +6,7 @@ use Ploi\Exceptions\Http\NotFound;
 use Ploi\Exceptions\Resource\Server\Site\DomainAlreadyExists;
 use Ploi\Http\Response;
 use Ploi\Resources\Server\Server;
+use Ploi\Resources\Server\Site;
 use stdClass;
 use Tests\BaseTest;
 
@@ -91,7 +92,7 @@ class SiteTest extends BaseTest
                 if ($site->domain === 'example.com') {
                     $this->server->site($site->id)->delete();
 
-                    $this->testCreateExampleDotCom();
+                    return $this->testCreateExampleDotCom();
                 }
             }
         }
@@ -104,6 +105,10 @@ class SiteTest extends BaseTest
     {
         try {
             $this->server->site()->create('example.com');
+
+            $this->assertTrue(true);
+
+            return $this->testCreateDuplicateSite(false);
         } catch (\Exception $e) {
             $this->assertInstanceOf(DomainAlreadyExists::class, $e);
 
@@ -124,7 +129,71 @@ class SiteTest extends BaseTest
     }
 
     /**
-     * @depends testCreateDuplicateSite
+     * @depends testCreateExampleDotCom
+     * @param $site
+     * @return Site
+     * @throws NotFound
+     * @throws \Ploi\Exceptions\Http\InternalServerError
+     * @throws \Ploi\Exceptions\Http\NotValid
+     * @throws \Ploi\Exceptions\Http\PerformingMaintenance
+     * @throws \Ploi\Exceptions\Http\TooManyAttempts
+     */
+    public function testGetDeployScript($site)
+    {
+        echo json_encode($site);
+
+        $script = $this
+            ->server
+            ->site($site->id)
+            ->getDeployScript();
+
+        $this->assertInternalType('string', $script);
+
+        return $site;
+    }
+
+    /**
+     * @depends testGetDeployScript
+     * @param $site
+     * @return Site
+     * @throws NotFound
+     * @throws \Ploi\Exceptions\Http\InternalServerError
+     * @throws \Ploi\Exceptions\Http\NotValid
+     * @throws \Ploi\Exceptions\Http\PerformingMaintenance
+     * @throws \Ploi\Exceptions\Http\TooManyAttempts
+     */
+    public function testUpdateDeployScript($site)
+    {
+        $script = "curl google.com";
+        $updated = $this->server
+            ->site($site->id)
+            ->updateDeployScript($script);
+
+        $this->assertTrue($updated);
+        $this->assertEquals($script, $this->server->site($site->id)->getDeployScript());
+
+        return $site;
+    }
+
+    /**
+     * @depends testUpdateDeployScript
+     * @param $site
+     * @return Site
+     * @throws NotFound
+     * @throws \Ploi\Exceptions\Http\InternalServerError
+     * @throws \Ploi\Exceptions\Http\NotValid
+     * @throws \Ploi\Exceptions\Http\PerformingMaintenance
+     * @throws \Ploi\Exceptions\Http\TooManyAttempts
+     */
+    public function testDeploySite($site)
+    {
+        $this->assertTrue($this->server->site($site->id)->deploy());
+
+        return $site;
+    }
+
+    /**
+     * @depends testDeploySite
      */
     public function testDeleteSite($site)
     {

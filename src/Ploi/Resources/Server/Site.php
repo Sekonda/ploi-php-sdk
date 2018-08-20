@@ -9,7 +9,6 @@ use Ploi\Exceptions\Http\PerformingMaintenance;
 use Ploi\Exceptions\Http\TooManyAttempts;
 use Ploi\Exceptions\Resource\Server\Site\DomainAlreadyExists;
 use Ploi\Http\Response;
-use Ploi\Ploi;
 use Ploi\Resources\Resource;
 use stdClass;
 
@@ -45,7 +44,7 @@ class Site extends Resource
      * Returns either a single site or an array of sites
      *
      * @param int|null $id
-     * @return null|\Ploi\Http\Response
+     * @return null|Response
      * @throws \Ploi\Exceptions\Http\InternalServerError
      * @throws \Ploi\Exceptions\Http\NotFound
      * @throws \Ploi\Exceptions\Http\NotValid
@@ -162,5 +161,102 @@ class Site extends Resource
         } else {
             return false;
         }
+    }
+
+    /**
+     * Deploys a website
+     *
+     * @param int|null $id
+     * @return bool
+     * @throws InternalServerError
+     * @throws NotFound
+     * @throws NotValid
+     * @throws PerformingMaintenance
+     * @throws TooManyAttempts
+     */
+    public function deploy(int $id = null): bool
+    {
+        if ($id) {
+            $this->setId($id);
+        }
+
+        // Build the default endpoint
+        $this->buildEndpoint();
+
+        // Deploy endpoint
+        $this->setEndpoint($this->getEndpoint() . '/deploy');
+
+        // Send the request
+        $response = $this->getPloi()->makeAPICall($this->getEndpoint(), 'post');
+
+        if ($response->getResponse()->getStatusCode() === 200) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * Gets the deploy script for a website
+     *
+     * @param int|null $id
+     * @return null|string
+     * @throws InternalServerError
+     * @throws NotFound
+     * @throws NotValid
+     * @throws PerformingMaintenance
+     * @throws TooManyAttempts
+     */
+    public function getDeployScript(int $id = null): ?string
+    {
+        if ($id) {
+            $this->setId($id);
+        }
+
+        // Make sure the endpoint is built
+        $this->buildEndpoint();
+        $this->setEndpoint($this->getEndpoint() . '/deploy/script');
+
+        $response = $this->getPloi()->makeAPICall($this->getEndpoint());
+
+        if(!empty($response->getJson()->deploy_script)) {
+            return $response->getJson()->deploy_script;
+        }
+
+        return null;
+    }
+
+    /**
+     * Updates the deploy script for a website
+     *
+     * @param string   $script
+     * @param int|null $id
+     * @return bool
+     * @throws InternalServerError
+     * @throws NotFound
+     * @throws NotValid
+     * @throws PerformingMaintenance
+     * @throws TooManyAttempts
+     */
+    public function updateDeployScript(string $script, int $id = null): bool
+    {
+        if ($id) {
+            $this->setId($id);
+        }
+
+        // Make sure the endpoint is built
+        $this->buildEndpoint();
+        $this->setEndpoint($this->getEndpoint() . '/deploy/script');
+
+        // Set the options
+        $options = [
+            'body' => json_encode([
+                'deploy_script' => $script,
+            ]),
+        ];
+
+        $response = $this->getPloi()->makeAPICall($this->getEndpoint(), 'patch', $options);
+
+        return $response->getResponse()->getStatusCode() === 200 ? true : false;
     }
 }
